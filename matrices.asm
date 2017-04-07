@@ -9,49 +9,7 @@ import printf
 
 segment readable executable
 
-struc vector [data]
-{
-    common
-        . dq data
-        .size = ($ - .)/8
-}
-macro vector_print vec, vecsize
-{
-    local for
-    mov rcx, vecsize
-    xor rbx, rbx
-    for:
-        mov rax, [vec + rbx*8]
-        push rbx
-        push rcx
-        print_double_rax
-        pop rcx
-        pop rbx
-        inc rbx
-        dec rcx
-        jnz for
-}
-
-a vector 1.0,1.0,1.0
-
-;macro vector_print vec, vecsize
-;{
-;    local for
-;    mov rcx, vecsize
-;    xor rbx, rbx
-;    for:
-;        mov rax, [vec + rbx*8]
-;        push rbx
-;        push rcx
-;        print_double_rax
-;        pop rcx
-;        pop rbx
-;        inc rbx
-;        dec rcx
-;        jnz for
-;}
-
-; macros
+; low level printing
 macro init_print
 {
     push rbp
@@ -65,20 +23,28 @@ macro print_double_rax
     mov rax, 1
     call [printf] 
 }
-macro print_scalar scal
+macro s_print scalar
 {
-    mov rax, [scal]
+    mov rax, [scalar]
     push rbx
     push rcx
     print_double_rax
     pop rbx
     pop rcx
 }
-macro print_vector vec,vecsize
+
+; high level vector and operations
+struc vector [data]
+{
+    common
+        . dq data
+        .size = ($ - .)/8
+}
+macro v_print vec
 {
     local for
-    mov rcx, vecsize
-    mov rbx, 0
+    mov rcx, vec#.size
+    xor rbx, rbx
     for:
         mov rax, [vec + rbx*8]
         push rbx
@@ -90,11 +56,11 @@ macro print_vector vec,vecsize
         dec rcx
         jnz for
 }
-macro vector_elemwise_flop vec1,vec2,vecsize,flop
+macro vector_elementwise vec1, vec2, flop
 {
     local for
-    mov rcx, vecsize
-    mov rbx, 0
+    mov rcx, vec1#.size
+    xor rbx, rbx
     for:
         ; load to fpu
         fld qword [vec2 + rbx*8]
@@ -109,32 +75,58 @@ macro vector_elemwise_flop vec1,vec2,vecsize,flop
         dec rcx
         jnz for
 }
-macro vector_fold vec,vecsize,output,flop
+macro vector_elementwise_single vec, flop
 {
     local for
-    fld qword [output]
-    mov rcx, vecsize
-    mov rbx, 0
+    mov rcx, vec#.size
+    xor rbx, rbx
+    for:
+        ; load to fpu
+        fld qword [vec + rbx*8]
+        ; perform operation
+        flop
+        ; store back to vec
+        fstp qword [vec + rbx*8]
+        ; loop end
+        inc rbx
+        dec rcx
+        jnz for
+}
+macro vector_fold scalar, vec, flop
+{
+    local for
+    fld qword [scalar]
+    mov rcx, vec#.size
+    xor rbx, rbx
     for:
         ; load entry to fpu
         fld qword [vec + rbx*8]
-        flop st1,st0
+        flop st1, st0
         fstp st0
         ; loop end
         inc rbx
         dec rcx
         jnz for
-    fstp qword [output]
+    fstp qword [scalar]
 }
-macro vector_dotproduct vec1,vec2,vecsize,output
+; end user ops
+macro v_dotp scalar, vec1, vec2
 {
-    vector_elemwise_flop vec1,vec2,vecsize,fmul
-    vector_fold vec1,vecsize,output,fadd
+    vector_elementwise vec1, vec2, fmul
+    vector_fold scalar, vec1, fadd
 }
+macro v_plus vec1, vec2
+{
+    vector_elementwise vec1, vec2, fadd
+}
+
+a vector 1.0,1.0,1.0
 
 start:
     init_print
-    vector_print a, a.size
+    v_print a
+    vector_elementwise a, a, fadd
+    v_print a
 
     ; exit
     mov rax, 60
@@ -144,17 +136,5 @@ start:
 segment readable writeable 
 
 pf db '%f', 0xa, 0 
-; dq 2.0
-; dq 1.0
-; dq -1.0
-; dq 2.0
-; dq 1.5
-; dq -1.5
-; dq 1.5
-; dq -1.5
-; dq 1.5
-; dq 1.5
-asize = ($-a)/8
 
 b dq 0.0
-
