@@ -9,6 +9,48 @@ import printf
 
 segment readable executable
 
+struc vector [data]
+{
+    common
+        . dq data
+        .size = ($ - .)/8
+}
+macro vector_print vec, vecsize
+{
+    local for
+    mov rcx, vecsize
+    xor rbx, rbx
+    for:
+        mov rax, [vec + rbx*8]
+        push rbx
+        push rcx
+        print_double_rax
+        pop rcx
+        pop rbx
+        inc rbx
+        dec rcx
+        jnz for
+}
+
+a vector 1.0,1.0,1.0
+
+;macro vector_print vec, vecsize
+;{
+;    local for
+;    mov rcx, vecsize
+;    xor rbx, rbx
+;    for:
+;        mov rax, [vec + rbx*8]
+;        push rbx
+;        push rcx
+;        print_double_rax
+;        pop rcx
+;        pop rbx
+;        inc rbx
+;        dec rcx
+;        jnz for
+;}
+
 ; macros
 macro init_print
 {
@@ -92,9 +134,7 @@ macro vector_dotproduct vec1,vec2,vecsize,output
 
 start:
     init_print
-    rept 100 {
-        vector_elemwise_flop a,a,asize,fadd
-    }
+    vector_print a, a.size
 
     ; exit
     mov rax, 60
@@ -104,18 +144,16 @@ start:
 segment readable writeable 
 
 pf db '%f', 0xa, 0 
-
-a dq -1.0
-  dq 2.0
-  dq 1.0
-  dq -1.0
-  dq 2.0
-  dq 1.5
-  dq -1.5
-  dq 1.5
-  dq -1.5
-  dq 1.5
-  dq 1.5
+; dq 2.0
+; dq 1.0
+; dq -1.0
+; dq 2.0
+; dq 1.5
+; dq -1.5
+; dq 1.5
+; dq -1.5
+; dq 1.5
+; dq 1.5
 asize = ($-a)/8
 
 b dq 0.0
