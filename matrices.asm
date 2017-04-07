@@ -110,20 +110,35 @@ macro vector_fold scalar, vec, flop
     fstp qword [scalar]
 }
 ; end user ops
-macro v_dotp scalar, vec1, vec2
-{
-    vector_elementwise vec1, vec2, fmul
-    vector_fold scalar, vec1, fadd
-}
 macro v_plus vec1, vec2
 {
     vector_elementwise vec1, vec2, fadd
 }
+macro v_minus vec1, vec2
+{
+    vector_elementwise vec1, vec2, fsub
+}
+macro v_times vec1, vec2
+{
+    vector_elementwise vec1, vec2, fmul
+}
+macro v_sum scalar, vec1
+{
+    vector_fold scalar, vec1, fadd
+}
+macro v_dotp scalar, vec1, vec2
+{
+    v_times vec1, vec2
+    v_sum scalar, vec1
+}
+macro v_sqrt vec1
+{
+    vector_elementwise_single vec1, fsqrt
+}
 
 start:
     init_print
-    vector_elementwise a, a, fadd
-    vector_elementwise_single a, fsqrt
+    v_sqrt a
     ;vector_fold b, a, fadd
     v_print a
     ;s_print b
@@ -137,5 +152,5 @@ segment readable writeable
 
 pf db '%f', 0xa, 0 
 
-a vector 1.0,1.0,1.0
+a vector 2.0,2.0,2.0
 b dq 0.0
