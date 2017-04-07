@@ -66,7 +66,7 @@ macro vector_elementwise vec1, vec2, flop
         fld qword [vec2 + rbx*8]
         fld qword [vec1 + rbx*8]
         ; perform operation
-        flop st0,st1
+        flop st0, st1
         ; store back to vec1
         fstp qword [vec1 + rbx*8]
         fstp st0
@@ -120,13 +120,13 @@ macro v_plus vec1, vec2
     vector_elementwise vec1, vec2, fadd
 }
 
-a vector 1.0,1.0,1.0
-
 start:
     init_print
-    v_print a
     vector_elementwise a, a, fadd
+    vector_elementwise_single a, fsqrt
+    ;vector_fold b, a, fadd
     v_print a
+    ;s_print b
 
     ; exit
     mov rax, 60
@@ -137,4 +137,5 @@ segment readable writeable
 
 pf db '%f', 0xa, 0 
 
+a vector 1.0,1.0,1.0
 b dq 0.0
